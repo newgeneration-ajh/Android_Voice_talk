@@ -7,6 +7,8 @@ import android.media.AudioTrack;
 import android.media.MediaRecorder;
 import android.util.Log;
 
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -34,6 +36,8 @@ public class PCMManger implements IPCMGetCompleteListener , IPCMPlayCompleteList
     private boolean isRun = false;
     private boolean isPlay = false;
 
+    private Queue<byte[]> mQueue = null;//new LinkedList<>();
+
     public PCMManger ( ) {
         mThreadPoolExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
         mAudioRecord = new AudioRecord( mAudioSource , mSampleRate , mChannelCount , mAudioFormat ,
@@ -46,6 +50,7 @@ public class PCMManger implements IPCMGetCompleteListener , IPCMPlayCompleteList
 
     public void startPCMRecord() {
         mAudioRecord.startRecording();
+        mQueue = new LinkedList<>();
         if ( mPCMRecorderRunnable == null ) {
             mPCMRecorderRunnable = new PCMRecorderRunnable(mAudioRecord,
                     this , mBufferSize );
@@ -60,14 +65,23 @@ public class PCMManger implements IPCMGetCompleteListener , IPCMPlayCompleteList
     }
 
     public void startPCMPaly() {
-        mAudioTrack.play();
         isPlay = true;
+
+        mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC , mSampleRate , mChannelCount ,
+                mAudioFormat , mBufferSize , AudioTrack.MODE_STREAM );
+        mAudioTrack.play();
+
         if ( mPCMPlayerRunnable == null ) {
-            mPCMPlayerRunnable = new PCMPlayerRunnable(mAudioTrack);
+            mPCMPlayerRunnable = new PCMPlayerRunnable(mAudioTrack , this);
+            //data set code 추가
         }
+        mPCMPlayerRunnable.setData(mQueue.remove());
+        mThreadPoolExecutor.submit(mPCMPlayerRunnable);
     }
     public void stopPCMPlay() {
-        isPlay = false;
+        isPlay = false;/*
+        mAudioTrack.stop();
+        mAudioTrack.release();*/
     }
 
     @Override
@@ -75,14 +89,27 @@ public class PCMManger implements IPCMGetCompleteListener , IPCMPlayCompleteList
         Log.d("Byte Size" , datas.length + " "  + datas );
         if ( isRun ) {
             //MemoryPool.getInstance().returnMemory(datas);
+            mQueue.offer(datas);
             mThreadPoolExecutor.submit(mPCMRecorderRunnable);
         }
     }
 
     @Override
     public void onPCMPlayComplete(byte[] datas) {
-        if ( isPlay ) {
+        Log.d("Byte Size" , datas.length + " "  + datas );
 
+        Log.d("Byte Size" , mQueue.size() + " " );
+        if ( isPlay ) {
+            //data set code 추가
+            if ( mQueue.isEmpty() ) {
+                isPlay = false;
+                //mAudioTrack.stop();
+                //AudioTrack.release();
+                return;
+            }
+            mPCMPlayerRunnable.setData(mQueue.remove());
+            mThreadPoolExecutor.submit(mPCMPlayerRunnable);
         }
+        MemoryPool.getInstance().returnMemory(datas);
     }
 }

@@ -57,7 +57,7 @@ public class AudioActivity extends AppCompatActivity {
         //mAudioRecord = new AudioRecord(mAudioSource, mSampleRate, mChannelCount, mAudioFormat, mBufferSize);
         //mAudioRecord.startRecording();
 
-        mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, mSampleRate, mChannelCount, mAudioFormat, mBufferSize, AudioTrack.MODE_STREAM);
+        //mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, mSampleRate, mChannelCount, mAudioFormat, mBufferSize, AudioTrack.MODE_STREAM);
 
         mPCMManger = new PCMManger();
 
@@ -96,7 +96,7 @@ public class AudioActivity extends AppCompatActivity {
             }
         });*/
 
-        mPlayThread = new Thread(new Runnable() {
+        /*mPlayThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 byte[] writeData = new byte[mBufferSize];
@@ -141,7 +141,7 @@ public class AudioActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
             }
-        });
+        });*/
     }
 
     public void onRecord(View view) {
@@ -168,15 +168,16 @@ public class AudioActivity extends AppCompatActivity {
         if(isPlaying == true) {
             isPlaying = false;
             mBtPlay.setText("Play");
+            mPCMManger.stopPCMPlay();
         }
         else {
             isPlaying = true;
             mBtPlay.setText("Stop");
-
-            if(mAudioTrack == null) {
+            mPCMManger.startPCMPaly();
+            /*if(mAudioTrack == null) {
                 mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, mSampleRate, mChannelCount, mAudioFormat, mBufferSize, AudioTrack.MODE_STREAM);
             }
-            mPlayThread.start();
+            mPlayThread.start();*/
         }
 
     }

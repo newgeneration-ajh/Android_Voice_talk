@@ -18,6 +18,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
+import kr.co.codersit.pcm_new.Audio.PCMManger;
+
 public class AudioActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
@@ -42,6 +44,8 @@ public class AudioActivity extends AppCompatActivity {
 
     public String mFilePath = null;
 
+    public PCMManger mPCMManger = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -50,12 +54,14 @@ public class AudioActivity extends AppCompatActivity {
         mBtRecord = (Button)findViewById(R.id.bt_record);
         mBtPlay = (Button)findViewById(R.id.bt_play);
 
-        mAudioRecord = new AudioRecord(mAudioSource, mSampleRate, mChannelCount, mAudioFormat, mBufferSize);
-        mAudioRecord.startRecording();
+        //mAudioRecord = new AudioRecord(mAudioSource, mSampleRate, mChannelCount, mAudioFormat, mBufferSize);
+        //mAudioRecord.startRecording();
 
         mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, mSampleRate, mChannelCount, mAudioFormat, mBufferSize, AudioTrack.MODE_STREAM);
 
-        mRecordThread = new Thread(new Runnable() {
+        mPCMManger = new PCMManger();
+
+        /*mRecordThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 byte[] readData = new byte[mBufferSize];
@@ -88,7 +94,7 @@ public class AudioActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
             }
-        });
+        });*/
 
         mPlayThread = new Thread(new Runnable() {
             @Override
@@ -141,17 +147,19 @@ public class AudioActivity extends AppCompatActivity {
     public void onRecord(View view) {
         if(isRecording == true) {
             isRecording = false;
+            mPCMManger.stopPCMRecord();
             mBtRecord.setText("Record");
         }
         else {
             isRecording = true;
+            mPCMManger.startPCMRecord();
             mBtRecord.setText("Stop");
 
-            if(mAudioRecord == null) {
+            /*if(mAudioRecord == null) {
                 mAudioRecord =  new AudioRecord(mAudioSource, mSampleRate, mChannelCount, mAudioFormat, mBufferSize);
                 mAudioRecord.startRecording();
             }
-            mRecordThread.start();
+            mRecordThread.start();*/
         }
 
     }

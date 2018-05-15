@@ -16,6 +16,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         requestRecordAudioPermission();
         setContentView(R.layout.activity_main);
+
     }
 
     private void requestRecordAudioPermission() {

@@ -7,18 +7,26 @@ import android.media.AudioTrack;
 import android.media.MediaRecorder;
 import android.util.Log;
 
+import com.score.rahasak.utils.OpusDecoder;
+import com.score.rahasak.utils.OpusEncoder;
+
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import kr.co.codersit.pcm_new.Audio.Listener.IOpusDecodeCompleteListener;
+import kr.co.codersit.pcm_new.Audio.Listener.IOpusEncodeCompleteListener;
 import kr.co.codersit.pcm_new.Audio.Listener.IPCMGetCompleteListener;
 import kr.co.codersit.pcm_new.Audio.Listener.IPCMPlayCompleteListener;
 import kr.co.codersit.pcm_new.Audio.Memory.MemoryPool;
+import kr.co.codersit.pcm_new.Audio.Runnable.OpusDecodeRunnable;
+import kr.co.codersit.pcm_new.Audio.Runnable.OpusEncodeRunnable;
 import kr.co.codersit.pcm_new.Audio.Runnable.PCMPlayerRunnable;
 import kr.co.codersit.pcm_new.Audio.Runnable.PCMRecorderRunnable;
 
-public class PCMManger implements IPCMGetCompleteListener , IPCMPlayCompleteListener {
+public class PCMManger implements IPCMGetCompleteListener , IPCMPlayCompleteListener
+        , IOpusEncodeCompleteListener , IOpusDecodeCompleteListener {
 
     private int mAudioSource = MediaRecorder.AudioSource.MIC;
     private int mSampleRate = 8000;
@@ -26,12 +34,18 @@ public class PCMManger implements IPCMGetCompleteListener , IPCMPlayCompleteList
     private int mAudioFormat = AudioFormat.ENCODING_PCM_16BIT;
     private int mBufferSize = AudioTrack.getMinBufferSize(mSampleRate,mChannelCount,mAudioFormat);
 
-    private AudioRecord mAudioRecord = null;
-    private AudioTrack mAudioTrack = null;
+    private AudioRecord mAudioRecord;
+    private AudioTrack mAudioTrack;
 
-    private ThreadPoolExecutor mThreadPoolExecutor = null;
+    private OpusEncoder mOpusEncoder;
+    private OpusDecoder mOpusDecoder;
+
+    private ThreadPoolExecutor mThreadPoolExecutor;
+
     private PCMRecorderRunnable mPCMRecorderRunnable = null;
     private PCMPlayerRunnable mPCMPlayerRunnable = null;
+    private OpusDecodeRunnable mOpusDecodeRunnable;
+    private OpusEncodeRunnable mOpusEncodeRunnable;
 
     private boolean isRun = false;
     private boolean isPlay = false;
@@ -44,6 +58,16 @@ public class PCMManger implements IPCMGetCompleteListener , IPCMPlayCompleteList
                 mBufferSize );
         mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC , mSampleRate , mChannelCount ,
                 mAudioFormat , mBufferSize , AudioTrack.MODE_STREAM );
+
+        mOpusEncoder = new OpusEncoder();
+        mOpusEncoder.init(mSampleRate , 2 , OpusEncoder.OPUS_APPLICATION_VOIP);
+
+        mOpusEncodeRunnable = new OpusEncodeRunnable(mOpusEncoder , this);
+        mOpusDecodeRunnable = new OpusDecodeRunnable(mOpusDecoder , this);
+
+        mOpusDecoder = new OpusDecoder();
+        mOpusDecoder.init(mSampleRate, 2);
+
         MemoryPool.getInstance().setBufferSize(mBufferSize);
 
     }
@@ -110,5 +134,15 @@ public class PCMManger implements IPCMGetCompleteListener , IPCMPlayCompleteList
             mThreadPoolExecutor.submit(mPCMPlayerRunnable);
         }
         MemoryPool.getInstance().returnMemory(datas);
+    }
+
+    @Override
+    public void onOpusDecodeComplete(byte[] datas, int size) {
+
+    }
+
+    @Override
+    public void onOpusEncodeComplete(byte[] datas, int size) {
+
     }
 }

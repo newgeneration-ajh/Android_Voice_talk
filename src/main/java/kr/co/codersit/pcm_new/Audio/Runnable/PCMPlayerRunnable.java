@@ -29,8 +29,5 @@ public class PCMPlayerRunnable implements Runnable{
             Log.d("Byte Size" , mBuffer.length + " "  + mBuffer );
             mPCMPlayCompleteListener.onPCMPlayComplete(mBuffer);
         }
-        else {
-            Log.d("Byte" , "Byte");
-        }
     }
 }

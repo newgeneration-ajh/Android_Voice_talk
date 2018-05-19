@@ -21,7 +21,7 @@ import kr.co.codersit.pcm_new.Audio.Runnable.PCMRecorderRunnable;
 public class PCMManger implements IPCMGetCompleteListener , IPCMPlayCompleteListener {
 
     private int mAudioSource = MediaRecorder.AudioSource.MIC;
-    private int mSampleRate = 44100;
+    private int mSampleRate = 8000;
     private int mChannelCount = AudioFormat.CHANNEL_IN_STEREO;
     private int mAudioFormat = AudioFormat.ENCODING_PCM_16BIT;
     private int mBufferSize = AudioTrack.getMinBufferSize(mSampleRate,mChannelCount,mAudioFormat);
@@ -36,7 +36,7 @@ public class PCMManger implements IPCMGetCompleteListener , IPCMPlayCompleteList
     private boolean isRun = false;
     private boolean isPlay = false;
 
-    private Queue<byte[]> mQueue = null;//new LinkedList<>();
+    private Queue<byte[]> mQueue = null;
 
     public PCMManger ( ) {
         mThreadPoolExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
@@ -88,7 +88,6 @@ public class PCMManger implements IPCMGetCompleteListener , IPCMPlayCompleteList
     public void onPCMGetComplete(byte[] datas) {
         Log.d("Byte Size" , datas.length + " "  + datas );
         if ( isRun ) {
-            //MemoryPool.getInstance().returnMemory(datas);
             mQueue.offer(datas);
             mThreadPoolExecutor.submit(mPCMRecorderRunnable);
         }

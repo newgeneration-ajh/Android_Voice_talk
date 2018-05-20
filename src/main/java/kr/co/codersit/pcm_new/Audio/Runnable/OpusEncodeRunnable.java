@@ -1,5 +1,7 @@
 package kr.co.codersit.pcm_new.Audio.Runnable;
 
+import android.util.Log;
+
 import com.score.rahasak.utils.OpusEncoder;
 
 import kr.co.codersit.pcm_new.Audio.Listener.IOpusEncodeCompleteListener;
@@ -24,7 +26,9 @@ public class OpusEncodeRunnable implements Runnable{
         if ( mOriginData != null ) {
             byte[] encodeByte = MemoryPool.getInstance().allocate();
             int dataSize = mOpusEncoder.encode(mOriginData, 160, encodeByte);
+            Log.d("Opus", "Data Size " + mOriginData.length + " to " + dataSize);
             mOpusEncodeCompleteListener.onOpusEncodeComplete(encodeByte, dataSize);
+            MemoryPool.getInstance().returnMemory(mOriginData);
             mOriginData = null;
         }
     }

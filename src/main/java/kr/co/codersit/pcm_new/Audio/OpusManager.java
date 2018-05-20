@@ -10,6 +10,7 @@ import android.util.Log;
 import com.score.rahasak.utils.OpusDecoder;
 import com.score.rahasak.utils.OpusEncoder;
 
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.Executors;
@@ -25,14 +26,15 @@ import kr.co.codersit.pcm_new.Audio.Runnable.OpusEncodeRunnable;
 import kr.co.codersit.pcm_new.Audio.Runnable.PCMPlayerRunnable;
 import kr.co.codersit.pcm_new.Audio.Runnable.PCMRecorderRunnable;
 
-public class PCMManger implements IPCMGetCompleteListener , IPCMPlayCompleteListener
-        , IOpusEncodeCompleteListener , IOpusDecodeCompleteListener {
+public class OpusManager implements IPCMGetCompleteListener, IPCMPlayCompleteListener
+        , IOpusEncodeCompleteListener, IOpusDecodeCompleteListener
+        , IAudioPlayer , IAudioRecorder {
 
     private int mAudioSource = MediaRecorder.AudioSource.MIC;
     private int mSampleRate = 8000;
     private int mChannelCount = AudioFormat.CHANNEL_IN_STEREO;
     private int mAudioFormat = AudioFormat.ENCODING_PCM_16BIT;
-    private int mBufferSize = AudioTrack.getMinBufferSize(mSampleRate,mChannelCount,mAudioFormat);
+    private int mBufferSize = 0;
 
     private AudioRecord mAudioRecord;
     private AudioTrack mAudioTrack;
@@ -42,7 +44,7 @@ public class PCMManger implements IPCMGetCompleteListener , IPCMPlayCompleteList
 
     private ThreadPoolExecutor mThreadPoolExecutor;
 
-    private PCMRecorderRunnable mPCMRecorderRunnable = null;
+    private PCMRecorderRunnable mPCMRecorderRunnable;
     private PCMPlayerRunnable mPCMPlayerRunnable = null;
     private OpusDecodeRunnable mOpusDecodeRunnable;
     private OpusEncodeRunnable mOpusEncodeRunnable;
@@ -52,15 +54,22 @@ public class PCMManger implements IPCMGetCompleteListener , IPCMPlayCompleteList
 
     private Queue<byte[]> mQueue = null;
 
-    public PCMManger ( ) {
+    public OpusManager(){
         mThreadPoolExecutor = (ThreadPoolExecutor) Executors.newFixedThreadPool(4);
+
+        mBufferSize = 160 * 2 * 2;
+
         mAudioRecord = new AudioRecord( mAudioSource , mSampleRate , mChannelCount , mAudioFormat ,
                 mBufferSize );
+
         mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC , mSampleRate , mChannelCount ,
                 mAudioFormat , mBufferSize , AudioTrack.MODE_STREAM );
 
+        mPCMRecorderRunnable = new PCMRecorderRunnable(mAudioRecord , this
+                , mBufferSize);
+
         mOpusEncoder = new OpusEncoder();
-        mOpusEncoder.init(mSampleRate , 2 , OpusEncoder.OPUS_APPLICATION_VOIP);
+        mOpusEncoder.init(mSampleRate , 2 , OpusEncoder.OPUS_APPLICATION_RESTRICTED_LOWDELAY);
 
         mOpusDecoder = new OpusDecoder();
         mOpusDecoder.init(mSampleRate, 2);
@@ -69,75 +78,73 @@ public class PCMManger implements IPCMGetCompleteListener , IPCMPlayCompleteList
         mOpusDecodeRunnable = new OpusDecodeRunnable(mOpusDecoder , this);
 
         MemoryPool.getInstance().setBufferSize(mBufferSize);
-
     }
 
-    public void startPCMRecord() {
-        mAudioRecord.startRecording();
-        mQueue = new LinkedList<>();
-        if ( mPCMRecorderRunnable == null ) {
-            mPCMRecorderRunnable = new PCMRecorderRunnable(mAudioRecord,
-                    this , mBufferSize );
-        }
-        mThreadPoolExecutor.submit(mPCMRecorderRunnable);
-        isRun = true;
-    }
 
-    public void stopPCMRecord() {
-        //mAudioRecord.release();
-        isRun = false;
-    }
-
-    public void startPCMPaly() {
+    @Override
+    public void startPlay() {
         isPlay = true;
 
-        mAudioTrack = new AudioTrack(AudioManager.STREAM_MUSIC , mSampleRate , mChannelCount ,
-                mAudioFormat , mBufferSize , AudioTrack.MODE_STREAM );
         mAudioTrack.play();
 
         if ( mPCMPlayerRunnable == null ) {
             mPCMPlayerRunnable = new PCMPlayerRunnable(mAudioTrack , this);
             //data set code 추가
         }
-        mPCMPlayerRunnable.setData(mQueue.remove());
+        mOpusDecodeRunnable.setData(mQueue.peek());
+        mThreadPoolExecutor.submit(mOpusDecodeRunnable);
+    }
+
+    @Override
+    public void stopPlay() {
+        isPlay = false;
+        mAudioTrack.stop();
+        //mOpusDecoder = null;
+    }
+
+    @Override
+    public void startRecord() {
+        mAudioRecord.startRecording();
+        mQueue = new LinkedList<>();
+        mThreadPoolExecutor.submit(mPCMRecorderRunnable);
+        isRun = true;
+    }
+
+    @Override
+    public void stopRecord() {
+        isRun = false;
+        //mOpusEncoder = null;
+        mAudioRecord.stop();
+    }
+
+    @Override
+    public void onOpusDecodeComplete(byte[] datas, int size) {
+        Log.d("Opus Complete" , "Decode Data Size : " + size);
+        mPCMPlayerRunnable.setData(datas);
         mThreadPoolExecutor.submit(mPCMPlayerRunnable);
     }
-    public void stopPCMPlay() {
-        isPlay = false;
+
+    @Override
+    public void onOpusEncodeComplete(byte[] datas, int size) {
+        Log.d("Opus Complete" , "Encode Data Size : " + size);
+        byte[] tmpDatas = Arrays.copyOf(datas,size);
+        mQueue.offer(tmpDatas);
     }
 
     @Override
     public void onPCMGetComplete(byte[] datas) {
-        Log.d("Byte Size" , datas.length + " "  + datas );
         if ( isRun ) {
-            mQueue.offer(datas);
+            mOpusEncodeRunnable.setData(datas);
+            mThreadPoolExecutor.submit(mOpusEncodeRunnable);
             mThreadPoolExecutor.submit(mPCMRecorderRunnable);
         }
     }
 
     @Override
     public void onPCMPlayComplete(byte[] datas) {
-        Log.d("Byte Size" , datas.length + " "  + datas );
-
-        Log.d("Byte Size" , mQueue.size() + " " );
         if ( isPlay ) {
-            if ( mQueue.isEmpty() ) {
-                isPlay = false;
-                return;
-            }
-            mPCMPlayerRunnable.setData(mQueue.remove());
-            mThreadPoolExecutor.submit(mPCMPlayerRunnable);
+            mOpusDecodeRunnable.setData(mQueue.poll());
+            mThreadPoolExecutor.submit(mOpusDecodeRunnable);
         }
-        MemoryPool.getInstance().returnMemory(datas);
-    }
-
-    @Override
-    public void onOpusDecodeComplete(byte[] datas, int size) {
-
-    }
-
-    @Override
-    public void onOpusEncodeComplete(byte[] datas, int size) {
-
     }
 }

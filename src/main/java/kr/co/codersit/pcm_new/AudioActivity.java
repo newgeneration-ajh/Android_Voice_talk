@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 
+import kr.co.codersit.pcm_new.Audio.OpusManager;
 import kr.co.codersit.pcm_new.Audio.PCMManger;
 
 public class AudioActivity extends AppCompatActivity {
@@ -17,7 +18,7 @@ public class AudioActivity extends AppCompatActivity {
     public Button mBtPlay = null;
 
     public PCMManger mPCMManger = null;
-
+    public OpusManager mOpusManager = null;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -27,18 +28,20 @@ public class AudioActivity extends AppCompatActivity {
         mBtPlay = (Button)findViewById(R.id.bt_play);
 
         mPCMManger = new PCMManger();
-
+        mOpusManager = new OpusManager();
     }
 
     public void onRecord(View view) {
         if(isRecording == true) {
             isRecording = false;
-            mPCMManger.stopPCMRecord();
+            //mPCMManger.stopPCMRecord();
+            mOpusManager.stopRecord();;
             mBtRecord.setText("Record");
         }
         else {
             isRecording = true;
-            mPCMManger.startPCMRecord();
+            //mPCMManger.startPCMRecord();
+            mOpusManager.startRecord();
             mBtRecord.setText("Stop");
         }
     }
@@ -46,12 +49,14 @@ public class AudioActivity extends AppCompatActivity {
         if(isPlaying == true) {
             isPlaying = false;
             mBtPlay.setText("Play");
-            mPCMManger.stopPCMPlay();
+            //mPCMManger.stopPCMPlay();
+            mOpusManager.stopPlay();
         }
         else {
             isPlaying = true;
             mBtPlay.setText("Stop");
-            mPCMManger.startPCMPaly();
+            //mPCMManger.startPCMPaly();
+            mOpusManager.startPlay();
         }
 
     }

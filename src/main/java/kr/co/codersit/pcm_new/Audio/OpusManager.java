@@ -143,8 +143,11 @@ public class OpusManager implements IPCMGetCompleteListener, IPCMPlayCompleteLis
     @Override
     public void onPCMPlayComplete(byte[] datas) {
         if ( isPlay ) {
-            mOpusDecodeRunnable.setData(mQueue.poll());
-            mThreadPoolExecutor.submit(mOpusDecodeRunnable);
+            if ( !mQueue.isEmpty() ) {
+                mOpusDecodeRunnable.setData(mQueue.poll());
+                mThreadPoolExecutor.submit(mOpusDecodeRunnable);
+            }
         }
     }
+
 }

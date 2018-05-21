@@ -3,31 +3,34 @@ package kr.co.codersit.pcm_new.Audio.Runnable;
 import android.media.AudioTrack;
 import android.util.Log;
 
+import java.util.LinkedList;
+import java.util.Queue;
+
 import kr.co.codersit.pcm_new.Audio.Listener.IPCMPlayCompleteListener;
 
 public class PCMPlayerRunnable implements Runnable{
 
-    private IPCMPlayCompleteListener mPCMPlayCompleteListener = null;
-
-    private AudioTrack mAudioTrack = null;
-    private byte[] mBuffer = null;
+    private IPCMPlayCompleteListener mPCMPlayCompleteListener ;
+    private AudioTrack mAudioTrack;
+    private Queue<byte[]> mBufferQueue;
 
     public PCMPlayerRunnable (AudioTrack audioTrack , IPCMPlayCompleteListener ipcmPlayCompleteListener ) {
         mAudioTrack = audioTrack;
         mPCMPlayCompleteListener = ipcmPlayCompleteListener;
+        mBufferQueue = new LinkedList<>();
     }
 
-    public void setData ( byte[] datas ) {
-        Log.d("Data" , "datas!");
-        mBuffer = datas;
+    public void setData ( byte[] buffer ) {
+        mBufferQueue.offer(buffer);
     }
 
     @Override
     public void run() {
-        if ( mBuffer != null ) {
-            mAudioTrack.write(mBuffer , 0 , mBuffer.length );
-            Log.d("Byte Size" , mBuffer.length + " "  + mBuffer );
-            mPCMPlayCompleteListener.onPCMPlayComplete(mBuffer);
+        if ( !mBufferQueue.isEmpty() ) {
+            byte[] buffer = mBufferQueue.poll();
+            mAudioTrack.write(buffer , 0 , buffer.length );
+            Log.d("Byte Size" , buffer.length + " "  + buffer );
+            mPCMPlayCompleteListener.onPCMPlayComplete(buffer);
         }
     }
 }
